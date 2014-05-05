@@ -51,8 +51,10 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 
 import org.lwjgl.input.Cursor;
+import org.lwjgl.input.IME.IMEEvent;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.BufferUtils;
@@ -638,4 +640,29 @@ final class MacOSXDisplay implements DisplayImplementation {
 		return (enableHighDPI && !Display.isFullscreen()) ? scaleFactor : 1f;
 	}
 
+    public void createIME ()
+        throws LWJGLException
+    {
+        // TODO: Mac IME support
+    }
+
+    public void destroyIME ()
+    {
+        // TODO: Mac IME support
+    }
+
+    public void readIME (Queue<IMEEvent> queue)
+    {
+        // TODO: Mac IME support
+    }
+
+    public void setIMEEnabled (boolean enabled)
+    {
+        // TODO: Mac IME support
+    }
+
+    public void setIMEComposing (boolean composing)
+    {
+        // TODO: Mac IME support
+    }
 }

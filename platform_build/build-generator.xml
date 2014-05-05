@@ -22,7 +22,7 @@
             <include name="org/lwjgl/util/generator/opengl/**.java"/>
 			<include name="org/lwjgl/util/generator/opengles/**.java"/>
             <include name="org/lwjgl/util/generator/opencl/**.java"/>
-			<compilerarg value="-Xlint:none"/>
+			<compilerarg value="-Xlint:all"/>
 		</javac>
         <!-- Compile helper classes used by the templates -->
 		<javac debug="yes" srcdir="${lwjgl.src}/java/" destdir="${lwjgl.bin}" source="1.5" target="1.5" taskname="generator">

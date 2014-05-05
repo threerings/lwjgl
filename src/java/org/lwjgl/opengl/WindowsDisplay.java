@@ -43,6 +43,7 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.lang.reflect.Method;
 import java.nio.*;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.lwjgl.LWJGLException;
@@ -51,6 +52,7 @@ import org.lwjgl.BufferUtils;
 import org.lwjgl.MemoryUtil;
 import org.lwjgl.input.Cursor;
 import org.lwjgl.input.Mouse;
+import org.lwjgl.input.IME.IMEEvent;
 import org.lwjgl.opengles.EGL;
 
 import javax.swing.*;
@@ -96,6 +98,9 @@ final class WindowsDisplay implements DisplayImplementation {
 	private static final int WM_PAINT 						  = 0x000F;
 	private static final int WM_KILLFOCUS                     = 8;
 	private static final int WM_SETFOCUS                      = 7;
+
+        private static final int WM_IME_KEYDOWN    = 0x0290;
+        private static final int WM_IME_KEYUP      = 0x0291;
 
 	private static final int SC_SIZE          = 0xF000;
 	private static final int SC_MOVE          = 0xF010;
@@ -181,6 +186,7 @@ final class WindowsDisplay implements DisplayImplementation {
 
 	private WindowsKeyboard keyboard;
 	private WindowsMouse mouse;
+        private WindowsIME ime;
 
 	private boolean close_requested;
 	private boolean is_dirty;
@@ -725,6 +731,36 @@ final class WindowsDisplay implements DisplayImplementation {
 	}
 	static native void doDestroyCursor(Object cursorHandle);
 
+    /**
+     * IME handling.
+     */
+    public void createIME ()
+        throws LWJGLException
+    {
+        ime = new WindowsIME(getHwnd());
+    }
+
+    public void destroyIME ()
+    {
+        ime.destroy();
+        ime = null;
+    }
+
+    public void readIME (Queue<IMEEvent> queue)
+    {
+        ime.read(queue);
+    }
+
+    public void setIMEEnabled (boolean enabled)
+    {
+        ime.setEnabled(enabled);
+    }
+
+    public void setIMEComposing (boolean composing)
+    {
+        ime.setComposing(composing);
+    }
+
 	public int getPbufferCapabilities() {
 		try {
 		// Return the capabilities of a minimum pixel format
@@ -1062,6 +1098,11 @@ final class WindowsDisplay implements DisplayImplementation {
 			case WM_CHAR:
 				handleChar(wParam, lParam, millis);
 				return 0L;
+                        case WM_IME_KEYUP:
+                                if (ime == null || !ime.handlesMessage(msg)) {
+                                    return defWindowProc(hwnd, msg, wParam, lParam);
+                                }
+				/* Fall through */
 			case WM_SYSKEYUP:
 				/* Fall through */
 			case WM_KEYUP:
@@ -1080,6 +1121,11 @@ final class WindowsDisplay implements DisplayImplementation {
 			case WM_KEYDOWN:
 				handleKeyButton(wParam, lParam, millis);
 				break;
+                        case WM_IME_KEYDOWN:
+                                if (ime != null && ime.handlesMessage(msg)) {
+                                    handleKeyButton(wParam, lParam, millis);
+                                }
+                                return defWindowProc(hwnd, msg, wParam, lParam);
 			case WM_QUIT:
 				close_requested = true;
 				return 0L;
@@ -1127,6 +1173,9 @@ final class WindowsDisplay implements DisplayImplementation {
 				break;
 		}
 
+                if (ime != null && ime.handlesMessage(msg)) {
+                    return ime.doHandleMessage(hwnd, msg, wParam, lParam);
+                }
 		return defWindowProc(hwnd, msg, wParam, lParam);
 	}
 
