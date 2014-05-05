@@ -1,39 +1,59 @@
-package org.lwjgl.opengl;
+#include "Windows.h"
+#include <malloc.h>
+#include "org_lwjgl_opengl_WindowsIME.h"
 
-import java.util.ArrayDeque;
-import java.util.Queue;
+#define STRINGRETURNER_SIG "org/lwjgl/opengl/WindowsIME$StringReturner"
 
-import org.lwjgl.input.IME.IMEEvent;
-import org.lwjgl.input.IME.State;
+jobject getStringReturner (JNIEnv *env, jint result, jstring buf)
+{
+    jclass clazz = (*env)->FindClass(env, STRINGRETURNER_SIG);
+    jmethodID constructor = (*env)->GetMethodID(env, clazz, "<init>", "()V");
+    jobject object = (*env)->NewObject(env, clazz, constructor);
 
-/**
- * A queue for IME events.
- */
-class IMEQueue {
-    private static final int DEFAULT_QUEUE_SIZE = 4;
+    (*env)->SetIntField(env, object, (*env)->GetFieldID(env, clazz, "result", "I"), result);
+    (*env)->SetObjectField(env, object, (*env)->GetFieldID(env, clazz, "buf", "Ljava/lang/String;"), buf);
 
-    private final ArrayDeque<IMEEvent> _queue = new ArrayDeque<IMEEvent>(DEFAULT_QUEUE_SIZE);
+    return object;
+}
 
-    private IMEEvent _currentEvent;
+JNIEXPORT jlong JNICALL Java_org_lwjgl_opengl_WindowsIME_CreateContext (
+        JNIEnv *env, jclass unused)
+{
+    return (intptr_t)ImmCreateContext();
+}
 
-    public synchronized void putEvent (IMEEvent event)
-    {
-        if (_currentEvent == null) {
-            _currentEvent = new IMEEvent();
-            _queue.addLast(_currentEvent);
-        }
-        event.copy(_currentEvent);
-        if (_currentEvent.state == State.END || _currentEvent.state == State.RESULT) {
-            _currentEvent = null;
-        }
+JNIEXPORT jboolean JNICALL Java_org_lwjgl_opengl_WindowsIME_DestroyContext (
+        JNIEnv *env, jclass unused, jlong himc_int)
+{
+    HIMC himc = (HIMC)(INT_PTR)himc_int;
+    return ImmDestroyContext(himc);
+}
+
+JNIEXPORT jlong JNICALL Java_org_lwjgl_opengl_WindowsIME_AssociateContext (
+        JNIEnv *env, jclass unused, jlong hwnd_int, jlong himc_int)
+{
+    HWND hwnd = (HWND)(INT_PTR)hwnd_int;
+    HIMC himc = (HIMC)(INT_PTR)himc_int;
+    return (intptr_t)ImmAssociateContext(hwnd, himc);
+}
+
+JNIEXPORT jobject JNICALL Java_org_lwjgl_opengl_WindowsIME_ImmGetCompositionString (
+        JNIEnv *env, jclass unused, jlong himc_int, jlong dw_index_int)
+{
+    HIMC himc = (HIMC)(INT_PTR)himc_int;
+    DWORD dwIndex = (DWORD)dw_index_int;
+    DWORD result = ImmGetCompositionStringW(himc, dwIndex, (LPVOID)NULL, 0l);
+    LPWSTR lpstr;
+    jstring str;
+
+    if (dwIndex == GCS_CURSORPOS || dwIndex == GCS_DELTASTART ||
+            result == IMM_ERROR_NODATA || result == IMM_ERROR_GENERAL) {
+        return getStringReturner(env, (jint)result, (jstring)NULL);
     }
 
-    public synchronized void copyEvents (Queue<IMEEvent> queue)
-    {
-        for (IMEEvent event : _queue) {
-            queue.add(event);
-        }
-        _queue.clear();
-        _currentEvent = null;
-    }
+    lpstr = (LPWSTR)malloc(result);
+    result = ImmGetCompositionStringW(himc, dwIndex, lpstr, result);
+    str = (*env)->NewString(env, lpstr, result/sizeof(WCHAR));
+    free(lpstr);
+    return getStringReturner(env, (jint)result, str);
 }
