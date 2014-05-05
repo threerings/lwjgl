@@ -48,6 +48,7 @@ import org.lwjgl.LWJGLException;
 import org.lwjgl.LWJGLUtil;
 import org.lwjgl.Sys;
 import org.lwjgl.input.Controllers;
+import org.lwjgl.input.IME;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
@@ -681,6 +682,9 @@ public final class Display {
 		if ( Controllers.isCreated() ) {
 			Controllers.poll();
 		}
+                if (IME.isCreated()) {
+                    IME.poll();
+                }
 	}
 
 	/**

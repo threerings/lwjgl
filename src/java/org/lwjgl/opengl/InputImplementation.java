@@ -40,8 +40,10 @@ package org.lwjgl.opengl;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.Queue;
 
 import org.lwjgl.LWJGLException;
+import org.lwjgl.input.IME.IMEEvent;
 
 public interface InputImplementation {
 	/*
@@ -120,6 +122,35 @@ public interface InputImplementation {
 	void readKeyboard(ByteBuffer buffer);
 
 //	int isStateKeySet(int key);
+
+        /*
+         * IME methods
+         */
+
+    /**
+     * Method to create the IME handler.
+     */
+    void createIME () throws LWJGLException;
+
+    /**
+     * Method to destroy the IME handler.
+     */
+    void destroyIME ();
+
+    /**
+     * Method to read the IME event queue.
+     */
+    void readIME (Queue<IMEEvent> queue);
+
+    /**
+     * Method to set the enabled state of IME.
+     */
+    void setIMEEnabled (boolean enabled);
+
+    /**
+     * Method to set the composing state of IME.
+     */
+    void setIMEComposing (boolean composing);
 
 	/** Native cursor handles */
 	Object createCursor(int width, int height, int xHotspot, int yHotspot, int numImages, IntBuffer images, IntBuffer delays) throws LWJGLException;

@@ -313,6 +313,7 @@
 			<class name="org.lwjgl.opengl.WindowsDisplay"/>
 			<class name="org.lwjgl.opengl.WindowsDisplayPeerInfo"/>
 			<class name="org.lwjgl.opengl.WindowsAWTGLCanvasPeerInfo"/>
+			<class name="org.lwjgl.opengl.WindowsIME"/>
 		</javah>
 
 		<javah classpath="${lwjgl.bin}" destdir="${lwjgl.src.native}/windows/opengl">
