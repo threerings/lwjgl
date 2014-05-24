@@ -45,8 +45,24 @@ import java.nio.ByteBuffer;
 
 import org.lwjgl.input.Keyboard;
 
+//
+// NOTE: META_KEY_HACK is necessary because NSApplication will not properly dispatch a keyup
+// event that happens when a meta key is down.
+// This may be fixed in Java 8. (they override sendEvent in NSApplicationAWT and manually
+// dispatch the key event)
+// Until then we hack it by manually dispatching a keyup event for every key that went down
+// while a meta was down.
+// This is NOT a suitable fix because it means that the game sees different key states than
+// what the player has their fingers on, but in practice it seems better than the unhacked
+// behavior, where pastes either get lost or result in extra keypresses getting "stuck".
+//
 final class MacOSXNativeKeyboard extends EventQueue {
 	private final byte[] key_states = new byte[Keyboard.KEYBOARD_SIZE];
+
+        // META_KEY_HACK: begin
+        private final int[] lmeta_key_chars = new int[Keyboard.KEYBOARD_SIZE];
+        private final int[] rmeta_key_chars = new int[Keyboard.KEYBOARD_SIZE];
+        // META_KEY_HACK: end
 
 	/** Event scratch array */
 	private final ByteBuffer event = ByteBuffer.allocate(Keyboard.EVENT_SIZE);
@@ -272,6 +288,36 @@ final class MacOSXNativeKeyboard extends EventQueue {
 		key_states[mapped_code] = state;
 		int key_int_char = character & 0xffff;
 		putKeyboardEvent(mapped_code, state, key_int_char, nanos, repeat);
+                // META_KEY_HACK: begin
+                switch (mapped_code) {
+                case Keyboard.KEY_LMETA:
+                case Keyboard.KEY_RMETA:
+                    if (state == 0) {
+                        int[] meta_chars = (mapped_code == Keyboard.KEY_LMETA)
+                                ? lmeta_key_chars
+                                : rmeta_key_chars;
+                        // key-up on every down key...
+                        for (int ii = 0, nn = meta_chars.length; ii < nn; ii++) {
+                            int int_char = meta_chars[ii];
+                            if (int_char != 0) {
+                                key_states[ii] = (byte)0;
+                                meta_chars[ii] = 0;
+                                putKeyboardEvent(ii, (byte)0, int_char, nanos, false);
+                            }
+                        }
+                    }
+                    break;
+
+                default:
+                    if (key_states[Keyboard.KEY_LMETA] == 1) {
+                        lmeta_key_chars[mapped_code] = (state == 1) ? key_int_char : 0;
+                    }
+                    if (key_states[Keyboard.KEY_RMETA] == 1) {
+                        rmeta_key_chars[mapped_code] = (state == 1) ? key_int_char : 0;
+                    }
+                    break;
+                }
+                // META_KEY_HACK: end
 	}
 
 	private int getMappedKeyCode(short key_code) {
